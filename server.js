@@ -1,39 +1,3 @@
-const express = require("express");
-const app = express();
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
-
-const GROK_API_KEY = process.env.GROK_API_KEY;
-const PORT = process.env.PORT || 3000;
-
-// Store conversation history per phone number
-const conversations = {};
-
-app.post("/sms", async (req, res) => {
-  const incomingMsg = req.body.Body?.trim();
-  const from = req.body.From;
-
-  if (!incomingMsg) {
-    return res.set("Content-Type", "text/xml").send(`<Response><Message>Say something!</Message></Response>`);
-  }
-
-  // Initialize conversation history for this number
-  if (!conversations[from]) {
-    conversations[from] = [];
-  }
-
-  // Add user message to history
-  conversations[from].push({ role: "user", content: incomingMsg });
-
-  // Keep last 20 messages to avoid token bloat
-  if (conversations[from].length > 20) {
-    conversations[from] = conversations[from].slice(-20);
-  }
-
-  try {
-    const response = await fetch("https://api.x.ai/v1/chat/completions", {
-      method: "POST",
-      headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${GROK_API_KEY}`,
       },
